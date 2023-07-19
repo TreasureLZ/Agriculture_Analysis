@@ -35,7 +35,7 @@ Django版本：4.2.2（个人测试使用）
 
 3.打开Navicat For Mysql（也就是数据库管理工具），创建 **agricultureDB** 数据库（命令行也可以）
 
-**如果不需要爬虫和数据清洗请跳过 4、5 步骤，选择执行第 6 步骤**
+**如果不需要爬虫和数据清洗请跳过 4、5、6 步骤，选择执行第 7 步骤**
 
 4.创建完数据库后，如果要自定义数据，则执行数据库同步指令。
 先切换目录分为两步骤 `python manage.py makemigrations` ，再执行 `python manage.py migrate`
