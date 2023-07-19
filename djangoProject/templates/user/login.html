@@ -1,0 +1,45 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login Page</title>
+  <link rel="stylesheet" type="text/css" href="{% static 'semantic/semantic.min.css' %}">
+  <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+  <script src="{% static 'semantic/semantic.min.js' %}"></script>
+</head>
+<body>
+  <div class="ui container" style="padding-top: 10%">
+    <div class="ui centered grid">
+      <div class="six wide column">
+        <h2 class="ui teal image header">
+          <div class="content">
+              农业生产可视化系统
+          </div>
+        </h2>
+        <form class="ui large form" method="post" action="{% url 'user:login' %}">
+          <div class="ui stacked segment">
+            <div class="field">
+              <div class="ui left icon input">
+                <i class="user icon"></i>
+                <input type="text" name="username" placeholder="Username">
+              </div>
+            </div>
+            <div class="field">
+              <div class="ui left icon input">
+                <i class="lock icon"></i>
+                <input type="password" name="password" placeholder="Password">
+              </div>
+            </div>
+            <button type="submit" class="ui fluid large teal submit button">Login</button>
+          </div>
+        </form>
+        <div class="ui message">
+          <a href="{% url 'user:register' %}">没有账号？点击注册</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

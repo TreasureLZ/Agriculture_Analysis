@@ -1,0 +1,1055 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>农业生产可视化系统的设计与实现</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.2/echarts.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/layer/3.5.1/layer.min.js"></script>
+    <script src="{% static 'js/china.js' %}"></script>
+    <link rel="stylesheet" type="text/css" href="{% static 'semantic/semantic.min.css' %}">
+    <script src="{% static 'semantic/semantic.min.js' %}"></script>
+    <style>
+        .line {
+            padding-top: 3%;
+        }
+
+        .ui.three.buttons {
+            width: 120px;
+        }
+
+        i.icon {
+            font-size: 16px;
+        }
+
+        .ui.blue.button {
+            background-color: #9cc9fa;
+            color: white;
+        }
+
+        #max_div {
+            max-height: 500px;
+            overflow-y: scroll;
+        }
+
+
+    </style>
+
+</head>
+<body>
+<div style="display: flex; justify-content: flex-end;padding-top: 20px;padding-right: 5%">
+    <div class="ui cards" style="max-width: 200px">
+        <div class="card">
+            <div class="content">
+                <div class="header">
+                    <div class="right item ui simple dropdown" data-dropdown="#user-dropdown">
+                        <span>{{ user.username }}</span>
+                        <i class="dropdown icon"></i>
+                        <div id="user-dropdown" class="menu">
+                            <div class="ui buttons">
+                                <a class="ui button" href="#" onclick="user_delete()">删除用户</a>
+                                <a class="ui button" href="{% url 'user:logout' %}">退出登录</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="line"></div>
+<div class="ui container" style="width: 90%">
+    <div class="ui stackable grid">
+        <div class="four wide column">
+            <!-- 左侧菜单 -->
+            <div class="ui vertical pointing menu">
+                <div class="item"><h3>农业数据分析</h3></div>
+                {% for zb_ in zb_results %}
+                    {% if zb == zb_ %}
+                        <a class="item active" href="{% url 'system:index' %}?zb={{ zb_ }}">{{ zb_ }}</a>
+                    {% else %}
+                        <a class="item" href="{% url 'system:index' %}?zb={{ zb_ }}">{{ zb_ }}</a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <br>
+            <div class="ui vertical pointing menu">
+                <div class="item"><h3>气候数据分析</h3></div>
+                <a class="item" href="{% url 'system:index' %}?qh=temperature">平均气温分析(最高最低)</a>
+                <a class="item" href="{% url 'system:index' %}?qh=precipitation">平均降水量分析</a>
+            </div>
+        </div>
+        {% if zb %}
+            <div class="twelve wide column">
+                <!-- 右侧内容 -->
+                <div class="ui placeholder segment">
+                    <div class="ui one icon buttons">
+                        <button class="ui blue button" id="table-button"><i class="icon table"></i></button>
+                        <button class="ui blue button" id="bar-button"><i class="icon chart bar"></i></button>
+                        <button class="ui blue button" id="line-button"><i class="icon chart area"></i></button>
+                        <button class="ui blue button" id="pie-button"><i class="icon chart pie"></i></button>
+                        <div style="padding-left: 15%"><h3 style="padding-top: 8px">
+                            指标：{{ zb }}｜单位：{{ unit }}</h3>
+                        </div>
+                        <div style="padding-left: 15%"></div>
+                        <a href="{% url 'system:index' %}?zb={{ zb }}&selectTime=近5年">
+                            <button class="ui red basic button">近5年</button>
+                        </a>
+                        <a href="{% url 'system:index' %}?zb={{ zb }}&selectTime=近10年">
+                            <button class="ui pink basic button">近10年</button>
+                        </a>
+                        <a href="{% url 'system:index' %}?zb={{ zb }}&selectTime=近20年">
+                            <button class="ui purple basic button">近20年</button>
+                        </a>
+                    </div>
+                    <div id="content" style="padding-top: 10px">
+                        <div id="table">
+                            <div id="max_div">
+                                <table class="ui celled table">
+                                    <thead>
+                                    <tr>
+                                        <th>地区</th>
+                                        {% for year in year_results %}
+                                            <th>{{ year }}年</th>
+                                        {% endfor %}
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for key,value in area_data.items %}
+                                        <tr>
+                                            <td>
+                                                <div data-label="{{ key }}">{{ key }}</div>
+                                            </td>
+                                            {% for data in value %}
+                                                <td data-label="{{ data }}">{{ data }}</td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="chart">
+                            <div id="myChart" style="height: 700px"></div>
+                            <div id="max_div">
+                                <table class="ui celled table" id="table_area">
+                                    <thead>
+                                    <tr>
+                                        <th>
+                                            <div style="display: inline-block; width: 120px;">地区
+                                            </div>
+                                            <div style="display: inline-block; padding-left: 10px">
+                                                <div class="ui checkbox">
+                                                    <input type="checkbox" id="area_all"
+                                                           onchange="all_area_func(this.id)">
+                                                    <label></label>
+                                                </div>
+                                            </div>
+                                        </th>
+                                        {% for year in year_results %}
+                                            <th>{{ year }}年</th>
+                                        {% endfor %}
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for key,value in area_data.items %}
+                                        <tr>
+                                            <td>
+                                                <div style="display: inline-block; width: 120px;"
+                                                     data-label="{{ key }}">{{ key }}
+                                                </div>
+                                                <div style="display: inline-block; padding-left: 10px">
+                                                    <div class="ui checkbox">
+                                                        <input type="checkbox" id="area_{{ key }}"
+                                                               onchange="myFunction(this.id)">
+                                                        <label></label>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            {% for data in value %}
+                                                <td data-label="{{ data }}">{{ data }}</td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                                <table class="ui celled table" id="table_year">
+                                    <thead>
+                                    <tr>
+                                        <th>地区</th>
+                                        {% for year in year_results %}
+                                            <th>{{ year }}年</th>
+                                        {% endfor %}
+                                    </tr>
+                                    <tr>
+                                        <th>
+                                            <div style="display: inline-block; width: 100px;">全选
+                                            </div>
+                                            <div style="display: inline-block; padding-left: 10px">
+                                                <div class="ui checkbox">
+                                                    <input type="checkbox" id="year_all"
+                                                           onchange="all_year_func(this.id)">
+                                                    <label></label>
+                                                </div>
+                                            </div>
+                                        </th>
+                                        {% for year in year_results %}
+                                            <th>
+                                                <div class="ui checkbox" style="padding-left: 15px">
+                                                    <input type="checkbox" style="margin-left: 15px"
+                                                           id="year_{{ year }}" onchange="myFunction(this.id)">
+                                                    <label></label>
+                                                </div>
+                                            </th>
+                                        {% endfor %}
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for key,value in area_data.items %}
+                                        <tr>
+                                            <td>
+                                                <div style="display: inline-block; width: 120px;"
+                                                     data-label="{{ key }}">{{ key }}</div>
+                                            </td>
+                                            {% for data in value %}
+                                                <td data-label="{{ data }}">{{ data }}</td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% elif qh %}
+            <div class="twelve wide column">
+                <div class="ui placeholder segment">
+                    <div class="ui buttons temperature">
+                        <button class="ui red basic button" id="month-button-1">1月</button>
+                        <button class="ui orange basic button" id="month-button-2">2月</button>
+                        <button class="ui yellow basic button" id="month-button-3">3月</button>
+                        <button class="ui olive basic button" id="month-button-4">4月</button>
+                        <button class="ui green basic button" id="month-button-5">5月</button>
+                        <button class="ui teal basic button" id="month-button-6">6月</button>
+                        <button class="ui blue basic button" id="month-button-7">7月</button>
+                        <button class="ui violet basic button" id="month-button-8">8月</button>
+                        <button class="ui purple basic button" id="month-button-9">9月</button>
+                        <button class="ui pink basic button" id="month-button-10">10月</button>
+                        <button class="ui brown basic button" id="month-button-11">11月</button>
+                        <button class="ui black basic button" id="month-button-12">12月</button>
+                    </div>
+                    <div class="ui three icon buttons temperature" style="padding-top: 10px">
+                        <button class="ui brown red button" id="max-button"><i class="icon sun"></i></button>
+                        <button class="ui brown teal button" id="min-button"><i class="icon moon"></i></button>
+                    </div>
+                    <div class="ui three icon buttons precipitation" style="padding-bottom: 10px">
+                        <button class="ui brown blue button" id="default-button"><i class="icon list"></i>
+                        </button>
+                        <button class="ui brown blue button" id="down-button"><i class="icon sort amount down"></i>
+                        </button>
+                        <button class="ui brown blue button" id="up-button"><i class="icon sort amount up"></i>
+                        </button>
+                    </div>
+                    <div id="content">
+                        <div id="qhChart" style="height: 700px"></div>
+                    </div>
+                </div>
+
+            </div>
+        {% endif %}
+    </div>
+</div>
+</body>
+<script>
+    $('.ui.dropdown').dropdown();
+</script>
+<form
+        style="display: none;"
+        id="user_delete"
+        action="{% url 'user:delete' user.id %}"
+        method="POST"
+>
+    {% csrf_token %}
+    <button type="submit">发送</button>
+</form>
+<script>
+    function user_delete() {
+        layer.open({
+            title: "确认删除",
+            content: "确认删除用户资料吗？",
+            yes: function (index, layero) {
+                $('form#user_delete button').click();
+                layer.close(index);
+            }
+        })
+    }
+</script>
+<script>
+    var zb = '{{ zb|safe }}';
+    var qh = '{{ qh|safe }}';
+    var direction = '{{ direction|safe }}'
+    if (direction == 'zb') {
+        var area_data = {{ area_data|safe }};
+        var area_results =
+        {{ area_results|safe }}
+        var year_data = {{ year_data|safe }};
+        var year_results = {{ year_results|safe }};
+        var unit = '{{ unit|safe }}';
+        var tableButton = $('#table-button');
+        var barButton = $('#bar-button');
+        var lineButton = $('#line-button');
+        var pieButton = $('#pie-button')
+        var table = $('#table');
+        var chart = $('#chart');
+        var table_area = $('#table_area');
+        var table_year = $('#table_year');
+        var type = 'line'
+        chart.hide();
+        var line_bar_Data = {};
+        var pie_Data = {};
+
+        function init() {
+            var myChart = echarts.init(document.getElementById('myChart'));
+            var series = []
+            for (let key in line_bar_Data) {
+                series.push({
+                    'name': key, 'type': type, 'data': line_bar_Data[key], markPoint: {
+                        data: [{
+                            type: 'min',
+                            name: '最小值',
+                            label: {
+                                textStyle: {
+                                    color: 'white'
+                                }
+                            }
+                        }, {
+                            type: 'max',
+                            name: '最大值',
+                            label: {
+                                textStyle: {
+                                    color: 'white'
+                                }
+                            }
+                        }]
+                    },
+                })
+            }
+            var data = []
+            for (let key in pie_Data) {
+                data.push({'name': key, 'value': pie_Data[key]})
+            }
+            if (data.length == 0) {
+                data.push({'name': '未选择数据', 'value': 0})
+            }
+            var option_line_bar = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    }
+                },
+                legend: {},
+                xAxis: {
+                    type: 'category',
+                    data: year_results
+                },
+                yAxis: {
+                    type: 'value',
+                    name: unit,
+                    axisLabel: {
+                        formatter: '{value}'
+                    }
+                },
+                dataZoom: [
+                    {
+                        type: 'inside',
+                        xAxisIndex: [0],
+                        filterMode: 'none'
+                    }
+                ],
+                series: series
+            };
+            var option_pie = {
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{a} <br/>{b}: {c} ({d}%)' // 显示数值和百分比
+                },
+                legend: {
+                    orient: 'vertical',
+                    left: 'left'
+                },
+                series: [
+                    {
+                        name: '总量',
+                        type: 'pie',
+                        radius: '50%',
+                        data: data,
+                        label: { // 加上标签
+                            show: true,
+                            formatter: '{b} ({d}%)' // 显示百分比
+                        },
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowOffsetX: 0,
+                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                            }
+                        }
+                    }
+                ]
+            };
+            if (type == 'pie') {
+                myChart.clear();
+                myChart.setOption(option_pie)
+            } else {
+                myChart.clear();
+                myChart.setOption(option_line_bar);
+            }
+
+        }
+
+        function all_area_func(checkboxId) {
+            var all_area_checkbox = document.getElementById(checkboxId);
+            if (all_area_checkbox.checked) {
+                line_bar_Data = area_data
+                area_results.forEach(function (area) {
+                    var checkbox_area = document.getElementById('area_' + area)
+                    checkbox_area.checked = true;
+                })
+                init()
+            } else {
+                line_bar_Data = {}
+                area_results.forEach(function (area) {
+                    var checkbox_area = document.getElementById('area_' + area)
+                    checkbox_area.checked = false;
+                })
+                init()
+            }
+        }
+
+        function all_year_func(checkboxId) {
+            var all_year_checkbox = document.getElementById(checkboxId);
+            if (all_year_checkbox.checked) {
+                pie_Data = year_data
+                year_results.forEach(function (year) {
+                    var checkbox_year = document.getElementById('year_' + year)
+                    checkbox_year.checked = true;
+                })
+                init()
+            } else {
+                pie_Data = {}
+                year_results.forEach(function (year) {
+                    var checkbox_year = document.getElementById('year_' + year)
+                    checkbox_year.checked = false;
+                })
+                init()
+            }
+        }
+
+
+        function myFunction(checkboxId) {
+            var checkbox = document.getElementById(checkboxId);
+            var key = checkboxId.split('_')[0];
+            var value = checkboxId.split('_')[1];
+            console.log(value)
+            if (key == 'area') {
+                if (checkbox.checked) {
+                    line_bar_Data[value] = area_data[value]
+                    init()
+                } else {
+                    delete line_bar_Data[value]
+                    init()
+                }
+            } else {
+                if (checkbox.checked) {
+                    pie_Data[value] = year_data[value]
+                    init()
+                } else {
+                    delete pie_Data[value]
+                    init()
+                }
+            }
+
+        }
+
+        tableButton.on('click', function () {
+            table.show();
+            chart.hide();
+        });
+        barButton.on('click', function () {
+            table.hide();
+            chart.show();
+            table_area.show();
+            table_year.hide();
+            type = 'bar';
+            init();
+        });
+        lineButton.on('click', function () {
+            table.hide();
+            chart.show();
+            table_area.show();
+            table_year.hide();
+            type = 'line';
+            init();
+        });
+        pieButton.on('click', function () {
+            table.hide();
+            chart.show();
+            table_area.hide();
+            table_year.show();
+            type = 'pie';
+            init();
+        });
+    }
+    else {
+        var qh_data = {{ qh_data|safe }};
+        var temperature_div = $('.temperature');
+        var precipitation_div = $('.precipitation');
+        var maxButton = $('#max-button');
+        var minButton = $('#min-button');
+        var monthButton_1 = $('#month-button-1')
+        var monthButton_2 = $('#month-button-2')
+        var monthButton_3 = $('#month-button-3')
+        var monthButton_4 = $('#month-button-4')
+        var monthButton_5 = $('#month-button-5')
+        var monthButton_6 = $('#month-button-6')
+        var monthButton_7 = $('#month-button-7')
+        var monthButton_8 = $('#month-button-8')
+        var monthButton_9 = $('#month-button-9')
+        var monthButton_10 = $('#month-button-10')
+        var monthButton_11 = $('#month-button-11')
+        var monthButton_12 = $('#month-button-12')
+        var downButton = $('#down-button')
+        var upButton = $('#up-button')
+        var defaultButton = $('#default-button')
+        var mapType = 'avg_max_temperature';
+        var monthValue = '1月';
+        var avg_precipitation_data = qh_data['avg_precipitation']
+        var pie_y = '70%'
+        var month_list = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
+        if (qh == 'temperature') {
+            temperature_div.show();
+            precipitation_div.hide();
+        } else {
+            temperature_div.hide();
+            precipitation_div.show();
+            init_precipitation();
+        }
+        upButton.on('click', function () {
+            month_list.forEach((month) => {
+                avg_precipitation_data[month] = avg_precipitation_data[month].sort(function (a, b) {
+                    return a.value - b.value;
+                });
+            });
+            pie_y = '30%'
+            init_precipitation()
+        });
+        downButton.on('click', function () {
+            month_list.forEach((month) => {
+                avg_precipitation_data[month] = avg_precipitation_data[month].sort(function (a, b) {
+                    return b.value - a.value;
+                });
+            });
+            pie_y = '70%'
+            init_precipitation()
+        })
+        defaultButton.on('click', function () {
+            avg_precipitation_data = qh_data['avg_precipitation_data']
+            pie_y = '70%'
+            init_precipitation()
+        })
+
+        function init_precipitation() {
+            var qhChart = echarts.init(document.getElementById('qhChart'));
+            var option = {
+                baseOption: {
+                    timeline: {
+                        axisType: 'category',
+                        autoPlay: false,
+                        playInterval: 1000,
+                        data: month_list,
+                        label: {
+                            formatter: '{value}'
+                        }
+                    },
+                    title: {
+                        subtext: '数据来自国家统计局'
+                    },
+                    tooltip: {},
+                    legend: {
+                        left: 'right',
+                        data: ['平均降水量']
+                    },
+                    calculable: true,
+                    grid: {
+                        top: 80,
+                        bottom: 100,
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'shadow',
+                                label: {
+                                    show: true,
+                                    formatter: function (params) {
+                                        return params.value.replace('\n', '');
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    xAxis: [
+                        {
+                            type: 'category',
+                            axisLabel: {interval: 0, fontsize: 12},
+
+                            splitLine: {show: false}
+                        }
+                    ],
+                    yAxis: [
+                        {
+                            type: 'value',
+                            name: '降水量（mm）'
+                        }
+                    ],
+                    dataZoom: [
+                        {
+                            type: 'inside',
+                            xAxisIndex: [0],
+                            filterMode: 'none'
+                        }
+                    ],
+                    series: [
+                        {
+                            name: '平均降水量',
+                            type: 'bar',
+                            itemStyle: {
+                                color: {
+                                    type: 'linear',
+                                    x: 0,
+                                    y: 0,
+                                    x2: 0,
+                                    y2: 1,
+                                    colorStops: [{
+                                        offset: 0,
+                                        color: '#5c62ff'
+                                    }, {
+                                        offset: 1,
+                                        color: '#bbddfd'
+                                    }]
+                                },
+                                borderRadius: [5, 5, 0, 0]
+                            },
+                            markPoint: {
+                                data: [{
+                                    type: 'min',
+                                    name: '最小值',
+                                    label: {
+                                        textStyle: {
+                                            color: 'white'
+                                        }
+                                    }
+                                }, {
+                                    type: 'max',
+                                    name: '最大值',
+                                    label: {
+                                        textStyle: {
+                                            color: 'white'
+                                        }
+                                    }
+                                }]
+                            }
+                        },
+                        {
+                            name: '各城市平均降水量占比',
+                            type: 'pie',
+                            center: [pie_y, '30%'],
+                            radius: '28%',
+                            z: 100
+                        }
+                    ]
+                },
+                options: [
+                    {
+                        xAxis: [
+                            {
+                                data: qh_data['avg_precipitation']['1月'].map(function (obj, index) {
+                                    let name = obj.name;
+                                    if (index % 2 == 1) {
+                                        return '\n' + name
+                                    }
+                                    return name
+                                })
+                            }
+                        ],
+                        title: {text: '1月份全国平均降水量分析'},
+                        series: [
+                            {data: qh_data['avg_precipitation']['1月']},
+                            {data: qh_data['avg_precipitation']['1月']}
+                        ]
+                    },
+                    {
+                        xAxis: [
+                            {
+                                data: qh_data['avg_precipitation']['2月'].map(function (obj, index) {
+                                    let name = obj.name;
+                                    if (index % 2 == 1) {
+                                        return '\n' + name
+                                    }
+                                    return name
+                                })
+                            }
+                        ],
+                        title: {text: '2月份全国平均降水量分析'},
+                        series: [
+                            {data: qh_data['avg_precipitation']['2月']},
+                            {data: qh_data['avg_precipitation']['2月']}
+                        ]
+                    },
+                    {
+                        xAxis: [
+                            {
+                                data: qh_data['avg_precipitation']['3月'].map(function (obj, index) {
+                                    let name = obj.name;
+                                    if (index % 2 == 1) {
+                                        return '\n' + name
+                                    }
+                                    return name
+                                })
+                            }
+                        ],
+                        title: {text: '3月份全国平均降水量分析'},
+                        series: [
+                            {data: qh_data['avg_precipitation']['3月']},
+                            {data: qh_data['avg_precipitation']['3月']}
+                        ]
+                    },
+                    {
+                        xAxis: [
+                            {
+                                data: qh_data['avg_precipitation']['4月'].map(function (obj, index) {
+                                    let name = obj.name;
+                                    if (index % 2 == 1) {
+                                        return '\n' + name
+                                    }
+                                    return name
+                                })
+                            }
+                        ],
+                        title: {text: '4月份全国平均降水量分析'},
+                        series: [
+                            {data: qh_data['avg_precipitation']['4月']},
+                            {data: qh_data['avg_precipitation']['4月']}
+
+                        ]
+                    },
+                    {
+                        xAxis: [
+                            {
+                                data: qh_data['avg_precipitation']['5月'].map(function (obj, index) {
+                                    let name = obj.name;
+                                    if (index % 2 == 1) {
+                                        return '\n' + name
+                                    }
+                                    return name
+                                })
+                            }
+                        ],
+                        title: {text: '5月份全国平均降水量分析'},
+                        series: [
+                            {data: qh_data['avg_precipitation']['5月']},
+                            {data: qh_data['avg_precipitation']['5月']}
+                        ]
+                    },
+                    {
+                       xAxis: [
+                            {
+                                data: qh_data['avg_precipitation']['6月'].map(function (obj, index) {
+                                    let name = obj.name;
+                                    if (index % 2 == 1) {
+                                        return '\n' + name
+                                    }
+                                    return name
+                                })
+                            }
+                        ],
+                        title: {text: '6月份全国平均降水量分析'},
+                        series: [
+                            {data: qh_data['avg_precipitation']['6月']},
+                            {data: qh_data['avg_precipitation']['6月']}
+                        ]
+                    },
+                    {
+                        xAxis: [
+                            {
+                                data: qh_data['avg_precipitation']['7月'].map(function (obj, index) {
+                                    let name = obj.name;
+                                    if (index % 2 == 1) {
+                                        return '\n' + name
+                                    }
+                                    return name
+                                })
+                            }
+                        ],
+                        title: {text: '7月份全国平均降水量分析'},
+                        series: [
+                            {data: qh_data['avg_precipitation']['7月']},
+                            {data: qh_data['avg_precipitation']['7月']}
+                        ]
+                    },
+                    {
+                        xAxis: [
+                            {
+                                data: qh_data['avg_precipitation']['8月'].map(function (obj, index) {
+                                    let name = obj.name;
+                                    if (index % 2 == 1) {
+                                        return '\n' + name
+                                    }
+                                    return name
+                                })
+                            }
+                        ],
+                        title: {text: '8月份全国平均降水量分析'},
+                        series: [
+                            {data: qh_data['avg_precipitation']['8月']},
+                            {data: qh_data['avg_precipitation']['8月']}
+                        ]
+                    },
+                    {
+                        xAxis: [
+                            {
+                                data: qh_data['avg_precipitation']['9月'].map(function (obj, index) {
+                                    let name = obj.name;
+                                    if (index % 2 == 1) {
+                                        return '\n' + name
+                                    }
+                                    return name
+                                })
+                            }
+                        ],
+                        title: {text: '9月份全国平均降水量分析'},
+                        series: [
+                            {data: qh_data['avg_precipitation']['9月']},
+                            {data: qh_data['avg_precipitation']['9月']}
+                        ]
+                    },
+                    {
+                        xAxis: [
+                            {
+                                data: qh_data['avg_precipitation']['10月'].map(function (obj, index) {
+                                    let name = obj.name;
+                                    if (index % 2 == 1) {
+                                        return '\n' + name
+                                    }
+                                    return name
+                                })
+                            }
+                        ],
+                        title: {text: '10月份全国平均降水量分析'},
+                        series: [
+                            {data: qh_data['avg_precipitation']['10月']},
+                            {data: qh_data['avg_precipitation']['10月']}
+                        ]
+                    },
+                    {
+                        xAxis: [
+                            {
+                                data: qh_data['avg_precipitation']['11月'].map(function (obj, index) {
+                                    let name = obj.name;
+                                    if (index % 2 == 1) {
+                                        return '\n' + name
+                                    }
+                                    return name
+                                })
+                            }
+                        ],
+                        title: {text: '11月份全国平均降水量分析'},
+                        series: [
+                            {data: qh_data['avg_precipitation']['11月']},
+                            {data: qh_data['avg_precipitation']['11月']}
+                        ]
+                    },
+                    {
+                        xAxis: [
+                            {
+                                data: qh_data['avg_precipitation']['12月'].map(function (obj, index) {
+                                    let name = obj.name;
+                                    if (index % 2 == 1) {
+                                        return '\n' + name
+                                    }
+                                    return name
+                                })
+                            }
+                        ],
+                        title: {text: '12月份全国平均降水量分析'},
+                        series: [
+                            {data: qh_data['avg_precipitation']['12月']},
+                            {data: qh_data['avg_precipitation']['12月']}
+                        ]
+                    }
+                ]
+            };
+            qhChart.clear();
+            qhChart.setOption(option);
+        }
+
+
+        function init_map() {
+            var data_list = qh_data[mapType][monthValue]
+            let mapText = ''
+            let mapColor = []
+            if (mapType == 'avg_max_temperature') {
+                mapText = '全国平均最高气温（' + monthValue + '份）'
+                mapColor = ['#ffd6d6', 'rgba(255,42,42,0.99)']
+            } else {
+                mapText = '全国平均最低气温（' + monthValue + '份）'
+                mapColor = ['#1989fa', '#d1e7fe']
+            }
+            let new_data_list = data_list.map((item, index) => {
+                return item.value
+            })
+            let data_list_max = Math.max(...new_data_list);
+            let data_list_min = Math.min(...new_data_list);
+            var qhChart = echarts.init(document.getElementById('qhChart'));
+            option = {
+                title: {
+                    text: mapText,
+                    x: 'center'
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: (params) => {
+                        let num
+                        let showHtml = ''
+                        if (isNaN(params.value)) {
+                            num = '0'
+                        } else {
+                            num = params.value
+                        }
+                        showHtml += `
+                        <span style="display: flex;">
+                            ${'省份'}：${params.name}</br>
+                            ${'气温'}：${num}
+                        </span>
+                    `
+                        return showHtml
+
+                    }
+                },
+
+                dataRange: {
+                    x: 'left',
+                    y: 'bottom',
+                    min: data_list_min,
+                    max: data_list_max,
+                    text: ['高', '低'], // 文本，默认为数值文本
+                    calculable: true,
+                    inRange: {
+                        color: mapColor,
+
+                    }
+                },
+                series: [{
+                    name: '数据',
+                    type: 'map',
+                    mapType: 'china',
+                    roam: false,
+                    selectedMode: false,
+                    itemStyle: {
+                        normal: {
+                            label: {
+                                show: true,
+                                textStyle: {
+                                    color: 'black'
+                                }
+                            }
+                        },
+                        emphasis: {
+                            areaColor: '#95ec69',
+                            label: {
+                                show: true
+
+                            }
+                        }
+                    },
+                    data: data_list
+                }]
+            };
+
+            qhChart.clear();
+            qhChart.setOption(option);
+        }
+
+        maxButton.on('click', function () {
+            mapType = 'avg_max_temperature'
+            init_map()
+        });
+
+        minButton.on('click', function () {
+            mapType = 'avg_min_temperature'
+            init_map()
+        });
+
+        monthButton_1.on('click', function () {
+            monthValue = '1月'
+            init_map()
+        });
+
+        monthButton_2.on('click', function () {
+            monthValue = '2月'
+            init_map()
+        });
+        monthButton_3.on('click', function () {
+            monthValue = '3月'
+            init_map()
+        });
+        monthButton_4.on('click', function () {
+            monthValue = '4月'
+            init_map()
+        });
+        monthButton_5.on('click', function () {
+            monthValue = '5月'
+            init_map()
+        });
+        monthButton_6.on('click', function () {
+            monthValue = '6月'
+            init_map()
+        });
+
+        monthButton_7.on('click', function () {
+            monthValue = '7月'
+            init_map()
+        });
+
+        monthButton_8.on('click', function () {
+            monthValue = '8月'
+            init_map()
+        });
+
+        monthButton_9.on('click', function () {
+            monthValue = '9月'
+            init_map()
+        });
+
+        monthButton_10.on('click', function () {
+            monthValue = '10月'
+            init_map()
+        });
+
+        monthButton_11.on('click', function () {
+            monthValue = '11月'
+            init_map()
+        });
+        monthButton_12.on('click', function () {
+            monthValue = '12月'
+            init_map()
+        });
+
+
+    }
+
+</script>
+</html>
