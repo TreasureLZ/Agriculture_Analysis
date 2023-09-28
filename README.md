@@ -31,7 +31,7 @@ Django版本：4.2.2（个人测试使用）
 
 ```https://github.com/TreasureLZ/Agriculture_Analysis.git```
 
-2.使用 Pycharm 打开项目，配置python编译环境，如果你没有前置环境，请在安装完python以后，在目录文件下面运行命令**pip install -r requirements.txt**，如果没响应，请考虑使用国内镜像，自行搜索清华源
+2.使用 Pycharm 打开项目，配置python编译环境，如果你没有前置环境，请在安装完python以后，在目录文件下面运行命令```pip install -r requirements.txt```，如果没响应，请考虑使用国内镜像，自行搜索清华源
 
 3.打开Navicat For Mysql（也就是数据库管理工具），创建 **agricultureDB** 数据库（命令行也可以）
 
